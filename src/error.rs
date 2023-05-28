@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Clone)]
 pub enum CalcError {
     #[error("Could not finish the calculation properly")]
     CalculationError,
@@ -9,5 +9,5 @@ pub enum CalcError {
     RpnError,
 
     #[error("{0} was not recognized")]
-    UnsupportedValue(String)
+    UnsupportedValue(String),
 }

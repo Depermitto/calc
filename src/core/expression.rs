@@ -20,16 +20,16 @@ impl<'a> Expression<'a> {
         }
     }
 
-    /// Creates a new `Expression` with **Reverse Polish Notation**
-    /// value using the dijkstra algorithm
-    pub fn dijkstra(input: &str) -> Self {
+    /// Converts `value` from infix _(normal)_ notation to
+    /// **Reverse Polish Notation** using the dijkstra algorithm
+    pub fn dijkstrify(&mut self) -> Result<&str, CalcError> {
         todo!()
     }
 
-    /// Consumes `value` inside and returns a `Result`. Assumes
-    /// `value` is in **Reverse Polish Notation**, otherwise or in case
+    /// Consumes `Self::value` inside and returns a `Result`. Assumes
+    /// `Self::value` is in **Reverse Polish Notation**, otherwise or in case
     /// of failure throws `CalcError`
-    pub fn rpn_calc(&mut self) -> Result<f64, CalcError> {
+    pub fn calc(&mut self) -> Result<f64, CalcError> {
         todo!()
     }
 
@@ -37,22 +37,26 @@ impl<'a> Expression<'a> {
     /// for mathematical purposes
     pub fn push(&mut self, value: &str) -> Result<(), CalcError> {
         // Trim whitespaces
-        let mut trimmed = value.trim().replace(" ", "");
+        let trimmed = value.trim().replace(" ", "");
+        let mut copy = trimmed.clone();
         // Remove any numbers and characters inside `self.supported`
-        trimmed.retain(|c| !char::is_numeric(c));
-        trimmed.retain(|c| !self.supported.contains(&c.to_string().as_str()));
+        copy.retain(|c| !char::is_numeric(c));
+        copy.retain(|c| !self.supported.contains(&c.to_string().as_str()));
 
-        if let false = trimmed.is_empty() {
-            return Err(CalcError::UnsupportedValue(trimmed));
-        } else {
-            self.value += value;
-            return Ok(())
-        }
+        return match copy.is_empty() {
+            true => {
+                self.value += &trimmed;
+                Ok(())
+            }
+            // Return Err() with first incorrect character
+            false => Err(CalcError::UnsupportedValue(copy.chars().nth(0).unwrap().to_string()))
+        };
     }
 
     /// Sets `Self::value` to `value`
-    pub fn edit(&mut self, value: &str) -> () {
-        self.value = String::from(value);
+    pub fn set(&mut self, value: &str) -> () {
+        self.clear();
+        self.push(value);
     }
 
     /// Is `Self::value` empty?
