@@ -2,6 +2,7 @@ mod error;
 mod core {
     pub mod calc;
     pub mod expression;
+    pub mod digit;
 }
 
 use crate::core::calc::Calc;

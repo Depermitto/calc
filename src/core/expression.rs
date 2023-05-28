@@ -1,22 +1,19 @@
 use crate::error::CalcError;
+use super::digit::Digit;
 
 /// Used strictly for mathematical expressions like
 /// **(8 + 7) * 4**. Accepts any amount of whitespace
 pub struct Expression<'a> {
-    value: String,
-    supported: Vec<&'a str>,
+    value: Vec<Digit<'a>>,
 }
 
 impl<'a> Expression<'a> {
     /// Creates a new empty `Expression`
     pub fn new() -> Self {
         Self {
-            value: String::new(),
+            value: vec![],
             // Obviously every number is supported, these are only
             // operators and special functions
-            supported: vec![
-                "+", "-", "*", "/", "%", "^", "!", "//", "(", ")", "min", "max"
-            ]
         }
     }
 
@@ -36,21 +33,22 @@ impl<'a> Expression<'a> {
     /// Appends `Self::value` by `value` which is heavily constrained
     /// for mathematical purposes
     pub fn push(&mut self, value: &str) -> Result<(), CalcError> {
-        // Trim whitespaces
-        let trimmed = value.trim().replace(" ", "");
-        let mut copy = trimmed.clone();
-        // Remove any numbers and characters inside `self.supported`
-        copy.retain(|c| !char::is_numeric(c));
-        copy.retain(|c| !self.supported.contains(&c.to_string().as_str()));
+        // // Trim whitespaces
+        // let trimmed = value.trim().replace(" ", "");
+        // let mut copy = trimmed.clone();
+        // // Remove any numbers and characters inside `self.supported`
+        // copy.retain(|c| !char::is_numeric(c));
+        // copy.retain(|c| !Digit::operators().contains(&c));
 
-        return match copy.is_empty() {
-            true => {
-                self.value += &trimmed;
-                Ok(())
-            }
-            // Return Err() with first incorrect character
-            false => Err(CalcError::UnsupportedValue(copy.chars().nth(0).unwrap().to_string()))
-        };
+        // match copy.is_empty() {
+        //     true => {
+        //         self.value += &trimmed;
+        //         Ok(())
+        //     }
+        //     // Return Err() with first incorrect character
+        //     false => Err(CalcError::UnsupportedValue(copy.chars().nth(0).unwrap().to_string()))
+        // }
+        todo!()
     }
 
     /// Sets `Self::value` to `value`
@@ -70,7 +68,7 @@ impl<'a> Expression<'a> {
     }
 
     // Getter for `Self::value`
-    pub fn get(&self) -> &str {
-        &self.value
+    pub fn get(&self) -> Vec<Digit<'a>> {
+        self.value.clone()
     }
 }
