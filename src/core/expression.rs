@@ -1,4 +1,4 @@
-use crate::error::CalcError;
+use crate::{error::CalcError};
 use super::symbol::Symbol::{self, *};
 
 /// Used strictly for mathematical expressions like
@@ -16,8 +16,38 @@ impl Expression {
 
     /// Converts `value` from infix _(normal)_ notation to
     /// **Reverse Polish Notation** using the dijkstra algorithm
-    pub fn dijkstrify(&mut self) -> Result<&str, CalcError> {
-        todo!()
+    pub fn dijkstrify(&mut self) -> Result<(), CalcError> {
+        let mut output: Vec<Symbol> = vec![];
+        let mut stack: Vec<Symbol> = vec![];
+        for symbol in self.value.iter() {
+            match symbol.clone() {
+                Digit(d) => output.push(Digit(d)),
+                Operator(s, _) if s == "(" => stack.push(symbol.clone()),
+                Operator(o1, w1) => {
+                    while let Some(Operator(o2, w2)) = stack.last() {
+                        if o1 == "(" && o2 == ")" {
+                            stack.pop();
+                        } else if o1 == "(" && stack.is_empty() {
+                            return Err(CalcError::BadParenthesis)
+                        } else if (w1 <= *w2) || (o1 == "(" && o2 != ")") {
+                            output.push(stack.pop().unwrap());
+                        } else {
+                            break;
+                        }
+                    }
+                    stack.push(symbol.clone());
+                }
+                _ => return Err(CalcError::BadExpression)
+            }
+        }
+        // Add stack elements to output in reverse order
+        stack.reverse();
+        output.append(&mut stack);
+        // Remove any parenthesis - shouldn't be like this TODO
+        output.retain(|o| !"()".contains(&o.get()));
+        self.value = output;
+
+        Ok(())
     }
 
     /// Consumes `Self::value` inside and returns a `Result`. Assumes
@@ -39,7 +69,7 @@ impl Expression {
         for ch in trimmed.chars() {
             let sym = Symbol::from(ch);
             match sym {
-                Operator(o) => self.value.push(o.into()),
+                Operator(o, _) => self.value.push(o.into()),
                 Digit(d_new) => match self.value.last_mut() {
                     Some(Digit(d_orig)) => *d_orig = *d_orig * 10.0 + d_new,
                     _ => self.value.push(Digit(d_new)),
@@ -68,5 +98,15 @@ impl Expression {
     // Getter for `Self::value`
     pub fn get(&self) -> Vec<Symbol> {
         self.value.clone()
+    }
+
+    pub fn to_str(&self) -> String {
+        self
+            .value
+            .iter()
+            .map(|o| o.get() + " ")
+            .collect::<String>()
+            .trim()
+            .to_string()
     }
 }
