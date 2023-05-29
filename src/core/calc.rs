@@ -1,12 +1,12 @@
 use crate::error::CalcError;
 use super::expression::Expression;
 
-pub struct Calc<'a> {
-    expression: Expression<'a>,
+pub struct Calc {
+    expression: Expression,
     result: Option<f64>,
 }
 
-impl<'a> Calc<'a> {
+impl Calc {
     /// Creates a new `Calc` with `expression` empty and `result` equal to 0.0
     pub fn new() -> Self {
         Self { expression: Expression::new(), result: None }
