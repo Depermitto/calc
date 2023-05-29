@@ -6,7 +6,10 @@ pub enum CalcError {
     CalculationError,
 
     #[error("Could not read the expression")]
-    RpnError,
+    BadExpression,
+
+    #[error("Bad parenthesis")]
+    BadParenthesis,
 
     #[error("{0} was not recognized")]
     UnsupportedValue(String),
