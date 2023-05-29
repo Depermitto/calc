@@ -1,4 +1,4 @@
-use crate::error::CalcError;
+use super::error::CalcError;
 use super::expression::Expression;
 
 pub struct Calc {

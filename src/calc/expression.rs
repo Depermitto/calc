@@ -1,4 +1,4 @@
-use crate::{error::CalcError};
+use super::error::CalcError;
 use super::symbol::Symbol::{self, *};
 
 /// Used strictly for mathematical expressions like

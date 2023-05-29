@@ -1,12 +1,12 @@
-mod error;
-mod core {
+mod calc {
     pub mod calc;
+    pub mod consts;
+    pub mod error;
     pub mod expression;
     pub mod symbol;
 }
-mod consts;
 
-use crate::core::expression::Expression;
+use calc::expression::Expression;
 
 fn main() {
     // let mut c = Calc::new();
