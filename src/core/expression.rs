@@ -1,20 +1,17 @@
 use crate::error::CalcError;
-use super::digit::Digit;
+use super::symbol::Symbol::{self, *};
 
 /// Used strictly for mathematical expressions like
 /// **(8 + 7) * 4**. Accepts any amount of whitespace
-pub struct Expression<'a> {
-    value: Vec<Digit<'a>>,
+#[derive(Debug, Clone)]
+pub struct Expression {
+    value: Vec<Symbol>,
 }
 
-impl<'a> Expression<'a> {
+impl Expression {
     /// Creates a new empty `Expression`
     pub fn new() -> Self {
-        Self {
-            value: vec![],
-            // Obviously every number is supported, these are only
-            // operators and special functions
-        }
+        Self { value: vec![] }
     }
 
     /// Converts `value` from infix _(normal)_ notation to
@@ -30,25 +27,26 @@ impl<'a> Expression<'a> {
         todo!()
     }
 
+    pub fn validate(&self) -> Result<(), CalcError> {
+        todo!()
+    }
+
     /// Appends `Self::value` by `value` which is heavily constrained
     /// for mathematical purposes
-    pub fn push(&mut self, value: &str) -> Result<(), CalcError> {
-        // // Trim whitespaces
-        // let trimmed = value.trim().replace(" ", "");
-        // let mut copy = trimmed.clone();
-        // // Remove any numbers and characters inside `self.supported`
-        // copy.retain(|c| !char::is_numeric(c));
-        // copy.retain(|c| !Digit::operators().contains(&c));
-
-        // match copy.is_empty() {
-        //     true => {
-        //         self.value += &trimmed;
-        //         Ok(())
-        //     }
-        //     // Return Err() with first incorrect character
-        //     false => Err(CalcError::UnsupportedValue(copy.chars().nth(0).unwrap().to_string()))
-        // }
-        todo!()
+    pub fn push(&mut self, value: &str) -> () {
+        // Trim whitespaces
+        let trimmed = value.trim().replace(" ", "");
+        for ch in trimmed.chars() {
+            let sym = Symbol::from(ch);
+            match sym {
+                Operator(o) => self.value.push(o.into()),
+                Digit(d_new) => match self.value.last_mut() {
+                    Some(Digit(d_orig)) => *d_orig = *d_orig * 10.0 + d_new,
+                    _ => self.value.push(Digit(d_new)),
+                }
+                _ => self.value.push(Unrecognized(ch.into()))
+            };
+        }
     }
 
     /// Sets `Self::value` to `value`
@@ -68,7 +66,7 @@ impl<'a> Expression<'a> {
     }
 
     // Getter for `Self::value`
-    pub fn get(&self) -> Vec<Digit<'a>> {
+    pub fn get(&self) -> Vec<Symbol> {
         self.value.clone()
     }
 }
