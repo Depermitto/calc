@@ -6,7 +6,6 @@ mod calc {
     pub mod symbol;
 }
 
-use calc::{symbol::Symbol, symbol::*};
 use calc::expr::Expr;
 
 fn main() {
@@ -17,7 +16,7 @@ fn main() {
     // }
     //
     let mut t = Expr::new();
-    t.push("3+4*2/(1-5)^2)");
+    t.push("3+4*2/(1-5)^2");
     println!("{:#?}", t.to_str());
     t.dijkstrify();
     println!("{:#?}", t.to_str());

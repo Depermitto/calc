@@ -1,5 +1,5 @@
 use std::ops::{Add, AddAssign};
-use super::consts::OPS;
+use super::{consts::OPS, error::CalcError};
 
 /// Represents a string literal with one of 4 States
 /// - Digit - holds information about a number
@@ -17,16 +17,8 @@ pub struct Symbol {
 }
 
 impl Symbol {
-    pub fn new() -> Self {
-        Self { value: String::new(), kind: SymbolKind::new() }
-    }
-
-    pub fn auto(value: &str) -> Self {
-        Self { value: value.to_string(), kind: value.to_state() }
-    }
-
-    pub fn with_state(value: &str, kind: SymbolKind) -> Self {
-        Self { value: value.to_string(), kind: kind }
+    pub fn new(value: String) -> Result<Self, CalcError> {
+        Ok( Self { value: value.clone(), kind: value.try_to_kind()? } )
     }
 
     pub fn value(&self) -> &str {
@@ -39,11 +31,6 @@ impl Symbol {
 
     pub fn clear(&mut self) {
         self.value.clear();
-        self.kind.clear();
-    }
-
-    pub fn empty(&self) -> bool {
-        self.value.is_empty()
     }
 }
 
@@ -52,10 +39,6 @@ impl Symbol {
 pub enum SymbolKind {
     Digit(f64),
 
-    Var,
-
-    Func,
-
     Dot,
 
     LeftParths,
@@ -63,61 +46,46 @@ pub enum SymbolKind {
     RightParths,
     /// Represents arithmetic operators, each one of
     /// them hold a certain weight.
-    Op(i32),
-
-    None,
+    Op(i32)
 }
 
-impl SymbolKind {
-    pub fn new() -> Self {
-        SymbolKind::None
-    }
-
-    pub fn clear(&mut self) {
-        *self = Self::new();
-    }
-}
-
-
-pub trait ToState {
-    fn to_state(self) -> SymbolKind;
+pub trait ToKind {
+    fn try_to_kind(self) -> Result<SymbolKind, CalcError>;
 }
 
 pub trait ToSymbol {
-    fn to_symbol(self) -> Symbol;
+    fn try_to_symbol(self) -> Result<Symbol, CalcError>;
 }
 
-impl<T> ToState for T
+impl<T> ToKind for T
 where
     T: ToString,
     String: From<T>
 {
-    fn to_state(self) -> SymbolKind {
+    fn try_to_kind(self) -> Result<SymbolKind, CalcError> {
         let s: String = self.into();
         if let Ok(num) = s.parse::<f64>() {
-            SymbolKind::Digit(num)
+            return Ok(SymbolKind::Digit(num))
         } else if let Some(w) = OPS.get(s.as_str()) {
-            SymbolKind::Op(w.clone())
-        } else if s == "." {
-            SymbolKind::Dot
-        } else if s == "(" {
-            SymbolKind::LeftParths
-        } else if s == ")" {
-            SymbolKind::RightParths
-        } else {
-            SymbolKind::None
+            return Ok(SymbolKind::Op(w.clone()))
+        }
+        match s.as_str() {
+            "." => Ok(SymbolKind::Dot),
+            "(" => Ok(SymbolKind::LeftParths),
+            ")" => Ok(SymbolKind::RightParths),
+            _ => Err(CalcError::UnsupportedValue(s))
         }
     }
 }
 
 impl<T> ToSymbol for T
 where
-    T: ToState,
+    T: ToKind,
     String: From<T>
 {
-    fn to_symbol(self) -> Symbol {
+    fn try_to_symbol(self) -> Result<Symbol, CalcError> {
         let s: String = self.into();
-        Symbol::auto(&s)
+        Symbol::new(s)
     }
 }
 
@@ -127,7 +95,7 @@ impl Add for Symbol {
 
     fn add(self, rhs: Self) -> Self::Output {
         let value = self.value + rhs.value();
-        Symbol::with_state(&value, value.clone().to_state())
+        Symbol::new(value).unwrap()
     }
 }
 

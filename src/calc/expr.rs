@@ -1,5 +1,5 @@
 use super::error::CalcError;
-use super::symbol::{Symbol, SymbolKind::*, ToSymbol, self};
+use super::symbol::{Symbol, SymbolKind::*, ToSymbol, self, ToKind};
 
 /// Used strictly for mathematical expressions like
 /// **(8 + 7) * 4**. Accepts any amount of whitespace
@@ -65,25 +65,30 @@ impl Expr {
 
     /// Appends `Self::value` by `value` which is heavily constrained
     /// for mathematical purposes
-    pub fn push(&mut self, value: &str) {
+    pub fn push(&mut self, value: &str) -> Result<(), CalcError> {
         // Trim whitespaces
         let trimmed = value.trim().replace(" ", "");
-        let mut num = Symbol::new();
+        let mut digit_parts = Vec::<char>::new();
         for ch in trimmed.chars() {
-            let sym = ch.to_symbol();
+            let sym = ch.try_to_symbol()?;
             match sym.kind() {
-                Dot | Digit(_) => num += sym,
+                Dot | Digit(_) => digit_parts.push(ch),
                 Op(_) | LeftParths | RightParths => {
-                    if !num.empty() {
-                        self.value.push(num.clone());
-                        num.clear();
+                    if !digit_parts.is_empty() {
+                        let digit = digit_parts.iter().collect::<String>();
+                        self.value.push(digit.try_to_symbol()?);
+                        digit_parts.clear();
                     }
                     self.value.push(sym);
                 },
                 _ => ()
             }
         }
-        self.value.push(num.clone());
+        if !digit_parts.is_empty() {
+            let digit = digit_parts.iter().collect::<String>();
+            self.value.push(digit.try_to_symbol()?);
+        }
+        Ok(())
     }
 
     /// Sets `Self::value` to `value`
