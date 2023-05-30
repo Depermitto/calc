@@ -6,7 +6,7 @@ mod calc {
     pub mod symbol;
 }
 
-use calc::expression::Expression;
+use calc::{symbol::Symbol, symbol::*};
 
 fn main() {
     // let mut c = Calc::new();
@@ -14,8 +14,11 @@ fn main() {
     //     Ok(num) => println!("{}", num),
     //     Err(e) => println!("{}", e)
     // }
-    let mut t = Expression::new();
-    t.push("12+8*7");
-    t.dijkstrify();
-    println!("{:#?}", t.to_str());
+    //
+    // let mut t = Expression::new();
+    // t.push("12+8*7");
+    // t.dijkstrify();
+    // println!("{:#?}", t.to_str());
+    let l = Symbol::<Op>::from("8");
+    println!("{:?}", l)
 }
