@@ -1,14 +1,14 @@
 use super::error::CalcError;
-use super::symbol::{Symbol, State::*, ToSymbol, self};
+use super::symbol::{Symbol, SymbolKind::*, ToSymbol, self};
 
 /// Used strictly for mathematical expressions like
 /// **(8 + 7) * 4**. Accepts any amount of whitespace
 #[derive(Debug, Clone)]
-pub struct Expression {
+pub struct Expr {
     value: Vec<Symbol>,
 }
 
-impl Expression {
+impl Expr {
     /// Creates a new empty `Expression`
     pub fn new() -> Self {
         Self { value: vec![] }
@@ -21,23 +21,21 @@ impl Expression {
         let mut stack: Vec<Symbol> = vec![];
         'main: for symbol in self.value.iter() {
             let symbol = symbol.clone();
-            match symbol.state() {
+            match symbol.kind() {
                 Digit(_) => output.push(symbol),
                 LeftParths => stack.push(symbol),
-                RightParths => while let Some(s) = stack.last() {
-                    match s.state() {
-                        LeftParths => { stack.pop(); },
+                RightParths => 'till_lparths: while let Some(s) = stack.last() {
+                    match s.kind() {
+                        LeftParths => { stack.pop(); break 'till_lparths; },
+                        _ if stack.len() == 1 => return Err(CalcError::BadParenthesis),
                         _ => output.push(stack.pop().unwrap())
                     };
                 },
                 Op(weight) => {
-                    'till_lparths: while let Some(s) = stack.last() {
-                        if let Op(w2) = s.state() {
-                            if w2 >= weight {
-                                output.push(stack.pop().unwrap());
-                            } else {
-                                break 'till_lparths;
-                            }
+                    'priority_queue: while let Some(s) = stack.last() {
+                        match s.kind() {
+                            Op(w2) if w2 >= weight => output.push(stack.pop().unwrap()),
+                            _ => break 'priority_queue
                         }
                     }
                     stack.push(symbol);
@@ -73,17 +71,19 @@ impl Expression {
         let mut num = Symbol::new();
         for ch in trimmed.chars() {
             let sym = ch.to_symbol();
-            match sym.state() {
+            match sym.kind() {
                 Dot | Digit(_) => num += sym,
-                Op(_) => {
-                    self.value.push(num.clone());
-                    num.clear();
+                Op(_) | LeftParths | RightParths => {
+                    if !num.empty() {
+                        self.value.push(num.clone());
+                        num.clear();
+                    }
                     self.value.push(sym);
                 },
                 _ => ()
             }
         }
-        self.value.push(num.clone())
+        self.value.push(num.clone());
     }
 
     /// Sets `Self::value` to `value`

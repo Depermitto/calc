@@ -2,12 +2,12 @@ mod calc {
     pub mod calc;
     pub mod consts;
     pub mod error;
-    pub mod expression;
+    pub mod expr;
     pub mod symbol;
 }
 
 use calc::{symbol::Symbol, symbol::*};
-use calc::expression::Expression;
+use calc::expr::Expr;
 
 fn main() {
     // let mut c = Calc::new();
@@ -16,8 +16,8 @@ fn main() {
     //     Err(e) => println!("{}", e)
     // }
     //
-    let mut t = Expression::new();
-    t.push("(1%^!!8)*(1+(12+4%8!))");
+    let mut t = Expr::new();
+    t.push("3+4*2/(1-5)^2)");
     println!("{:#?}", t.to_str());
     t.dijkstrify();
     println!("{:#?}", t.to_str());

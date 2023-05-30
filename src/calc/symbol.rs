@@ -3,7 +3,7 @@ use super::consts::OPS;
 
 /// Represents a string literal with one of 4 States
 /// - Digit - holds information about a number
-/// - Op - represents an arithmetic operator with a specified type
+/// - Op - represents an arithmetic operator with a specified kind
 /// - Func - represents a function
 /// - LeftParths - (
 /// - RightParths - )
@@ -13,39 +13,43 @@ use super::consts::OPS;
 #[derive(Debug, Clone)]
 pub struct Symbol {
     value: String,
-    state: State
+    kind: SymbolKind
 }
 
 impl Symbol {
     pub fn new() -> Self {
-        Self { value: String::new(), state: State::new() }
+        Self { value: String::new(), kind: SymbolKind::new() }
     }
 
     pub fn auto(value: &str) -> Self {
-        Self { value: value.to_string(), state: value.to_state() }
+        Self { value: value.to_string(), kind: value.to_state() }
     }
 
-    pub fn with_state(value: &str, state: State) -> Self {
-        Self { value: value.to_string(), state: state }
+    pub fn with_state(value: &str, kind: SymbolKind) -> Self {
+        Self { value: value.to_string(), kind: kind }
     }
 
     pub fn value(&self) -> &str {
         &self.value
     }
 
-    pub fn state(&self) -> State {
-        self.state
+    pub fn kind(&self) -> SymbolKind {
+        self.kind
     }
 
     pub fn clear(&mut self) {
         self.value.clear();
-        self.state.clear();
+        self.kind.clear();
+    }
+
+    pub fn empty(&self) -> bool {
+        self.value.is_empty()
     }
 }
 
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum State {
+pub enum SymbolKind {
     Digit(f64),
 
     Var,
@@ -64,9 +68,9 @@ pub enum State {
     None,
 }
 
-impl State {
+impl SymbolKind {
     pub fn new() -> Self {
-        State::None
+        SymbolKind::None
     }
 
     pub fn clear(&mut self) {
@@ -76,7 +80,7 @@ impl State {
 
 
 pub trait ToState {
-    fn to_state(self) -> State;
+    fn to_state(self) -> SymbolKind;
 }
 
 pub trait ToSymbol {
@@ -88,20 +92,20 @@ where
     T: ToString,
     String: From<T>
 {
-    fn to_state(self) -> State {
+    fn to_state(self) -> SymbolKind {
         let s: String = self.into();
         if let Ok(num) = s.parse::<f64>() {
-            State::Digit(num)
+            SymbolKind::Digit(num)
         } else if let Some(w) = OPS.get(s.as_str()) {
-            State::Op(w.clone())
+            SymbolKind::Op(w.clone())
         } else if s == "." {
-            State::Dot
+            SymbolKind::Dot
         } else if s == "(" {
-            State::LeftParths
+            SymbolKind::LeftParths
         } else if s == ")" {
-            State::RightParths
+            SymbolKind::RightParths
         } else {
-            State::None
+            SymbolKind::None
         }
     }
 }
@@ -131,6 +135,6 @@ impl AddAssign for Symbol {
     fn add_assign(&mut self, rhs: Self) {
         let symbol = self.clone() + rhs;
         self.value = symbol.value;
-        self.state = symbol.state;
+        self.kind = symbol.kind;
     }
 }

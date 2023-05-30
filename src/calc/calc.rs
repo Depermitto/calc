@@ -1,15 +1,15 @@
 use super::error::CalcError;
-use super::expression::Expression;
+use super::expr::Expr;
 
 pub struct Calc {
-    expression: Expression,
+    expression: Expr,
     result: Option<f64>,
 }
 
 impl Calc {
     /// Creates a new `Calc` with `expression` empty and `result` equal to 0.0
     pub fn new() -> Self {
-        Self { expression: Expression::new(), result: None }
+        Self { expression: Expr::new(), result: None }
     }
 
     pub fn result(&self) -> Option<f64> {
