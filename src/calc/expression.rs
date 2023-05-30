@@ -1,5 +1,5 @@
 use super::error::CalcError;
-use super::symbol::Symbol::{self, *};
+use super::symbol::{Symbol, State::*, ToSymbol, self};
 
 /// Used strictly for mathematical expressions like
 /// **(8 + 7) * 4**. Accepts any amount of whitespace
@@ -19,32 +19,36 @@ impl Expression {
     pub fn dijkstrify(&mut self) -> Result<(), CalcError> {
         let mut output: Vec<Symbol> = vec![];
         let mut stack: Vec<Symbol> = vec![];
-        for symbol in self.value.iter() {
-            match symbol.clone() {
-                Digit(d) => output.push(Digit(d)),
-                Operator(s, _) if s == "(" => stack.push(symbol.clone()),
-                Operator(o1, w1) => {
-                    while let Some(Operator(o2, w2)) = stack.last() {
-                        if o1 == "(" && o2 == ")" {
-                            stack.pop();
-                        } else if o1 == "(" && stack.is_empty() {
-                            return Err(CalcError::BadParenthesis)
-                        } else if (w1 <= *w2) || (o1 == "(" && o2 != ")") {
-                            output.push(stack.pop().unwrap());
-                        } else {
-                            break;
+        'main: for symbol in self.value.iter() {
+            let symbol = symbol.clone();
+            match symbol.state() {
+                Digit(_) => output.push(symbol),
+                LeftParths => stack.push(symbol),
+                RightParths => while let Some(s) = stack.last() {
+                    match s.state() {
+                        LeftParths => { stack.pop(); },
+                        _ => output.push(stack.pop().unwrap())
+                    };
+                },
+                Op(weight) => {
+                    'till_lparths: while let Some(s) = stack.last() {
+                        if let Op(w2) = s.state() {
+                            if w2 >= weight {
+                                output.push(stack.pop().unwrap());
+                            } else {
+                                break 'till_lparths;
+                            }
                         }
                     }
-                    stack.push(symbol.clone());
-                }
-                _ => return Err(CalcError::BadExpression)
-            }
+                    stack.push(symbol);
+                },
+                _ => ()
+            };
         }
         // Add stack elements to output in reverse order
         stack.reverse();
         output.append(&mut stack);
         // Remove any parenthesis - shouldn't be like this TODO
-        output.retain(|o| !"()".contains(&o.get()));
         self.value = output;
 
         Ok(())
@@ -63,20 +67,23 @@ impl Expression {
 
     /// Appends `Self::value` by `value` which is heavily constrained
     /// for mathematical purposes
-    pub fn push(&mut self, value: &str) -> () {
+    pub fn push(&mut self, value: &str) {
         // Trim whitespaces
         let trimmed = value.trim().replace(" ", "");
+        let mut num = Symbol::new();
         for ch in trimmed.chars() {
-            let sym = Symbol::from(ch);
-            match sym {
-                Operator(o, _) => self.value.push(o.into()),
-                Digit(d_new) => match self.value.last_mut() {
-                    Some(Digit(d_orig)) => *d_orig = *d_orig * 10.0 + d_new,
-                    _ => self.value.push(Digit(d_new)),
-                }
-                _ => self.value.push(Unrecognized(ch.into()))
-            };
+            let sym = ch.to_symbol();
+            match sym.state() {
+                Dot | Digit(_) => num += sym,
+                Op(_) => {
+                    self.value.push(num.clone());
+                    num.clear();
+                    self.value.push(sym);
+                },
+                _ => ()
+            }
         }
+        self.value.push(num.clone())
     }
 
     /// Sets `Self::value` to `value`
@@ -104,7 +111,7 @@ impl Expression {
         self
             .value
             .iter()
-            .map(|o| o.get() + " ")
+            .map(|o| o.value().to_owned() + " ")
             .collect::<String>()
             .trim()
             .to_string()

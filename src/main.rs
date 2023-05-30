@@ -7,6 +7,7 @@ mod calc {
 }
 
 use calc::{symbol::Symbol, symbol::*};
+use calc::expression::Expression;
 
 fn main() {
     // let mut c = Calc::new();
@@ -15,10 +16,9 @@ fn main() {
     //     Err(e) => println!("{}", e)
     // }
     //
-    // let mut t = Expression::new();
-    // t.push("12+8*7");
-    // t.dijkstrify();
-    // println!("{:#?}", t.to_str());
-    let l = Symbol::<Op>::from("8");
-    println!("{:?}", l)
+    let mut t = Expression::new();
+    t.push("(1%^!!8)*(1+(12+4%8!))");
+    println!("{:#?}", t.to_str());
+    t.dijkstrify();
+    println!("{:#?}", t.to_str());
 }
