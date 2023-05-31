@@ -5,13 +5,13 @@ use super::symbol::{Symbol, Token::*, ToSymbol, self, ToToken};
 /// **(8 + 7) * 4**. Accepts any amount of whitespace
 #[derive(Debug, Clone)]
 pub struct Expr {
-    value: Vec<Symbol>,
+    symbols: Vec<Symbol>,
 }
 
 impl Expr {
     /// Creates a new empty `Expression`
     pub fn new() -> Self {
-        Self { value: vec![] }
+        Self { symbols: vec![] }
     }
 
     /// Converts `value` from infix _(normal)_ notation to
@@ -19,7 +19,7 @@ impl Expr {
     pub fn dijkstrify(&mut self) -> Result<(), CalcError> {
         let mut output: Vec<Symbol> = vec![];
         let mut stack: Vec<Symbol> = vec![];
-        'main: for symbol in self.value.iter() {
+        'main: for symbol in self.symbols.iter() {
             let symbol = symbol.clone();
             match symbol.token() {
                 Digit(_) => output.push(symbol),
@@ -47,7 +47,7 @@ impl Expr {
         stack.reverse();
         output.append(&mut stack);
         // Remove any parenthesis - shouldn't be like this TODO
-        self.value = output;
+        self.symbols = output;
 
         Ok(())
     }
@@ -71,13 +71,10 @@ impl Expr {
         for ch in trimmed.chars() {
             let sym = ch.try_to_symbol()?;
             match sym.token() {
-                Dot | Digit(_) => match self.value.last_mut() {
-                    Some(last) if last.token().is_digit() => {
-                            last.push_str(ch.to_string().as_str())?
-                    }
-                    _ => self.value.push(sym),
+                Dot | Digit(_) if !self.symbols.is_empty() && self.symbols.last().unwrap().token().is_digit() => {
+                    self.symbols.last_mut().unwrap().push_str(ch.to_string().as_str())?
                 }
-                _ => self.value.push(sym),
+                _ => self.symbols.push(sym),
             }
         }
         Ok(())
@@ -91,22 +88,22 @@ impl Expr {
 
     /// Is `Self::value` empty?
     pub fn empty(&self) -> bool {
-        self.value.is_empty()
+        self.symbols.is_empty()
     }
 
     /// Clear `Self::value`
     pub fn clear(&mut self) -> () {
-        self.value.clear();
+        self.symbols.clear();
     }
 
     // Getter for `Self::value`
     pub fn get(&self) -> Vec<Symbol> {
-        self.value.clone()
+        self.symbols.clone()
     }
 
     pub fn to_str(&self) -> String {
         self
-            .value
+            .symbols
             .iter()
             .map(|o| o.value().to_owned() + " ")
             .collect::<String>()
