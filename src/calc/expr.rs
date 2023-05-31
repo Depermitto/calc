@@ -1,5 +1,5 @@
 use super::error::CalcError;
-use super::symbol::{Symbol, SymbolKind::*, ToSymbol, self, ToKind};
+use super::symbol::{Symbol, Token::*, ToSymbol, self, ToToken};
 
 /// Used strictly for mathematical expressions like
 /// **(8 + 7) * 4**. Accepts any amount of whitespace
@@ -21,11 +21,11 @@ impl Expr {
         let mut stack: Vec<Symbol> = vec![];
         'main: for symbol in self.value.iter() {
             let symbol = symbol.clone();
-            match symbol.kind() {
+            match symbol.token() {
                 Digit(_) => output.push(symbol),
                 LeftParths => stack.push(symbol),
                 RightParths => 'till_lparths: while let Some(s) = stack.last() {
-                    match s.kind() {
+                    match s.token() {
                         LeftParths => { stack.pop(); break 'till_lparths; },
                         _ if stack.len() == 1 => return Err(CalcError::BadParenthesis),
                         _ => output.push(stack.pop().unwrap())
@@ -33,7 +33,7 @@ impl Expr {
                 },
                 Op(weight) => {
                     'priority_queue: while let Some(s) = stack.last() {
-                        match s.kind() {
+                        match s.token() {
                             Op(w2) if w2 >= weight => output.push(stack.pop().unwrap()),
                             _ => break 'priority_queue
                         }
@@ -68,25 +68,17 @@ impl Expr {
     pub fn push(&mut self, value: &str) -> Result<(), CalcError> {
         // Trim whitespaces
         let trimmed = value.trim().replace(" ", "");
-        let mut digit_parts = Vec::<char>::new();
         for ch in trimmed.chars() {
             let sym = ch.try_to_symbol()?;
-            match sym.kind() {
-                Dot | Digit(_) => digit_parts.push(ch),
-                Op(_) | LeftParths | RightParths => {
-                    if !digit_parts.is_empty() {
-                        let digit = digit_parts.iter().collect::<String>();
-                        self.value.push(digit.try_to_symbol()?);
-                        digit_parts.clear();
+            match sym.token() {
+                Dot | Digit(_) => match self.value.last_mut() {
+                    Some(last) if last.token().is_digit() => {
+                            last.push_str(ch.to_string().as_str())?
                     }
-                    self.value.push(sym);
-                },
-                _ => ()
+                    _ => self.value.push(sym),
+                }
+                _ => self.value.push(sym),
             }
-        }
-        if !digit_parts.is_empty() {
-            let digit = digit_parts.iter().collect::<String>();
-            self.value.push(digit.try_to_symbol()?);
         }
         Ok(())
     }

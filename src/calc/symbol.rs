@@ -13,20 +13,27 @@ use super::{consts::OPS, error::CalcError};
 #[derive(Debug, Clone)]
 pub struct Symbol {
     value: String,
-    kind: SymbolKind
+    token: Token
 }
 
 impl Symbol {
     pub fn new(value: String) -> Result<Self, CalcError> {
-        Ok( Self { value: value.clone(), kind: value.try_to_kind()? } )
+        Ok( Self { value: value.clone(), token: value.try_to_token()? } )
     }
 
     pub fn value(&self) -> &str {
         &self.value
     }
 
-    pub fn kind(&self) -> SymbolKind {
-        self.kind
+    /// Change the stored value and automatically update the token
+    pub fn push_str(&mut self, str: &str) -> Result<(), CalcError> {
+        self.value.push_str(str);
+        self.token = self.value.clone().try_to_token()?;
+        Ok(())
+    }
+
+    pub fn token(&self) -> Token {
+        self.token
     }
 
     pub fn clear(&mut self) {
@@ -36,7 +43,7 @@ impl Symbol {
 
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum SymbolKind {
+pub enum Token {
     Digit(f64),
 
     Dot,
@@ -49,30 +56,36 @@ pub enum SymbolKind {
     Op(i32)
 }
 
-pub trait ToKind {
-    fn try_to_kind(self) -> Result<SymbolKind, CalcError>;
+impl Token {
+    pub fn is_digit(self) -> bool {
+        if let Self::Digit(_) = self { true } else { false }
+    }
+}
+
+pub trait ToToken {
+    fn try_to_token(self) -> Result<Token, CalcError>;
 }
 
 pub trait ToSymbol {
     fn try_to_symbol(self) -> Result<Symbol, CalcError>;
 }
 
-impl<T> ToKind for T
+impl<T> ToToken for T
 where
     T: ToString,
     String: From<T>
 {
-    fn try_to_kind(self) -> Result<SymbolKind, CalcError> {
+    fn try_to_token(self) -> Result<Token, CalcError> {
         let s: String = self.into();
         if let Ok(num) = s.parse::<f64>() {
-            return Ok(SymbolKind::Digit(num))
+            return Ok(Token::Digit(num))
         } else if let Some(w) = OPS.get(s.as_str()) {
-            return Ok(SymbolKind::Op(w.clone()))
+            return Ok(Token::Op(w.clone()))
         }
         match s.as_str() {
-            "." => Ok(SymbolKind::Dot),
-            "(" => Ok(SymbolKind::LeftParths),
-            ")" => Ok(SymbolKind::RightParths),
+            "." => Ok(Token::Dot),
+            "(" => Ok(Token::LeftParths),
+            ")" => Ok(Token::RightParths),
             _ => Err(CalcError::UnsupportedValue(s))
         }
     }
@@ -80,7 +93,7 @@ where
 
 impl<T> ToSymbol for T
 where
-    T: ToKind,
+    T: ToToken,
     String: From<T>
 {
     fn try_to_symbol(self) -> Result<Symbol, CalcError> {
@@ -103,6 +116,6 @@ impl AddAssign for Symbol {
     fn add_assign(&mut self, rhs: Self) {
         let symbol = self.clone() + rhs;
         self.value = symbol.value;
-        self.kind = symbol.kind;
+        self.token = symbol.token;
     }
 }
