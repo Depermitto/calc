@@ -1,5 +1,4 @@
-use std::ops::{Add, AddAssign};
-use super::{consts::OPS, error::CalcError};
+use super::error::CalcError;
 
 /// Represents a string literal with one of 4 States
 /// - Digit - holds information about a number
@@ -10,40 +9,8 @@ use super::{consts::OPS, error::CalcError};
 /// - Dot - .
 /// - Var - variables
 /// - None - For everything else
-#[derive(Debug, Clone)]
-pub struct Symbol {
-    value: String,
-    token: Token
-}
-
-impl Symbol {
-    pub fn new(value: String) -> Result<Self, CalcError> {
-        Ok( Self { value: value.clone(), token: value.try_to_token()? } )
-    }
-
-    pub fn value(&self) -> &str {
-        &self.value
-    }
-
-    /// Change the stored value and automatically update the token
-    pub fn push_str(&mut self, str: &str) -> Result<(), CalcError> {
-        self.value.push_str(str);
-        self.token = self.value.clone().try_to_token()?;
-        Ok(())
-    }
-
-    pub fn token(&self) -> Token {
-        self.token
-    }
-
-    pub fn clear(&mut self) {
-        self.value.clear();
-    }
-}
-
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Token {
+#[derive(Debug, Clone, Copy)]
+pub enum Symbol {
     Digit(f64),
 
     Dot,
@@ -51,71 +18,122 @@ pub enum Token {
     LeftParths,
 
     RightParths,
-    /// Represents arithmetic operators, each one of
-    /// them hold a certain weight.
-    Op(i32)
+    /// Reresents arithmetic operators, each one of
+    Op(Op),
 }
 
-impl Token {
-    pub fn is_digit(self) -> bool {
-        if let Self::Digit(_) = self { true } else { false }
+#[derive(Debug, Clone, Copy)]
+pub enum Op {
+    Plus,
+    Minus,
+    Fractal,
+    Multiply,
+    Divide,
+    Power,
+    Remainer,
+}
+
+impl Symbol {
+    pub fn new(value: &str) -> Result<Self, CalcError> {
+        if let Ok(d) = value.parse::<f64>() {
+            return Ok(Self::Digit(d));
+        }
+        match value {
+            "." => Ok(Self::Dot),
+            "(" => Ok(Self::LeftParths),
+            ")" => Ok(Self::RightParths),
+            "+" => Ok(Self::Op(Op::Plus)),
+            "-" => Ok(Self::Op(Op::Minus)),
+            "!" => Ok(Self::Op(Op::Fractal)),
+            "%" => Ok(Self::Op(Op::Remainer)),
+            "*" => Ok(Self::Op(Op::Multiply)),
+            "/" => Ok(Self::Op(Op::Divide)),
+            "^" => Ok(Self::Op(Op::Power)),
+            _ => Err(CalcError::UnsupportedValue(value.to_string())),
+        }
+    }
+
+    pub fn as_str(&self) -> String {
+        match self {
+            Symbol::Digit(d) => d.to_string(),
+            Symbol::Dot => ".".to_string(),
+            Symbol::LeftParths => "(".to_string(),
+            Symbol::RightParths => ")".to_string(),
+            Symbol::Op(op) => op.as_str().to_string(),
+        }
     }
 }
 
-pub trait ToToken {
-    fn try_to_token(self) -> Result<Token, CalcError>;
+
+impl Op {
+    pub fn as_str(&self) -> &str {
+        match self {
+            Op::Plus => "+",
+            Op::Minus => "-",
+            Op::Fractal => "!",
+            Op::Multiply => "*",
+            Op::Divide => "/",
+            Op::Power => "^",
+            Op::Remainer => "%",
+        }
+    }
+
+    pub fn weight(&self) -> i32 {
+        match self {
+            Op::Plus => 1,
+            Op::Minus => 1,
+            Op::Fractal => 3,
+            Op::Multiply => 2,
+            Op::Divide => 2,
+            Op::Power => 3,
+            Op::Remainer => 2,
+        }
+    }
+
+    pub fn call(&self, first: f64, second: f64) -> Result<f64, CalcError> {
+        match self {
+            Op::Plus => Ok(first + second),
+            Op::Fractal => Err(CalcError::UnsupportedValue(String::from("!"))),
+            Op::Minus => Ok(first - second),
+            Op::Multiply => Ok(first * second),
+            Op::Divide => {
+                if second == 0.0 {
+                    Err(CalcError::ZeroDivision)
+                } else {
+                    Ok(first / second)
+                }
+            }
+            Op::Power => Ok(first * second),
+            Op::Remainer => Ok(first % second),
+        }
+    }
 }
 
 pub trait ToSymbol {
     fn try_to_symbol(self) -> Result<Symbol, CalcError>;
 }
 
-impl<T> ToToken for T
-where
-    T: ToString,
-    String: From<T>
-{
-    fn try_to_token(self) -> Result<Token, CalcError> {
-        let s: String = self.into();
-        if let Ok(num) = s.parse::<f64>() {
-            return Ok(Token::Digit(num))
-        } else if let Some(w) = OPS.get(s.as_str()) {
-            return Ok(Token::Op(w.clone()))
-        }
-        match s.as_str() {
-            "." => Ok(Token::Dot),
-            "(" => Ok(Token::LeftParths),
-            ")" => Ok(Token::RightParths),
-            _ => Err(CalcError::UnsupportedValue(s))
-        }
-    }
-}
-
 impl<T> ToSymbol for T
 where
-    T: ToToken,
-    String: From<T>
+    T: ToString,
+    String: From<T>,
 {
     fn try_to_symbol(self) -> Result<Symbol, CalcError> {
         let s: String = self.into();
-        Symbol::new(s)
+        Symbol::new(&s)
     }
 }
 
-/// Can be used for adding Digit Symbols
-impl Add for Symbol {
-    type Output = Symbol;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        let value = self.value + rhs.value();
-        Symbol::new(value).unwrap()
+impl ToString for Symbol {
+    fn to_string(&self) -> String {
+        self.as_str().to_string()
     }
 }
 
-impl AddAssign for Symbol {
-    fn add_assign(&mut self, rhs: Self) {
-        let symbol = self.clone() + rhs;
-        self.value = symbol.value;
-        self.token = symbol.token;
+impl TryFrom<&str> for Symbol {
+    type Error = CalcError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::new(value)
     }
 }
