@@ -17,11 +17,14 @@ impl Calc {
     }
 
     pub fn evaluate(&mut self, value: &str) -> Result<f64, CalcError> {
-        self.expression.set(value);
-        self.expression.dijkstrify();
+        self.expression.set(value)?;
+        self.expression.dijkstrify()?;
 
-        let outcome = self.expression.calc()?;
-        self.result = Some(outcome);
-        Ok(outcome)
+        let outcome = self.expression.calc();
+        match outcome {
+            Ok(out) => self.result = Some(out),
+            Err(e) => return Err(e)
+        }
+        Ok(self.result().unwrap())
     }
 }
