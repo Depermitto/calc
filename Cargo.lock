@@ -926,7 +926,6 @@ name = "gusty"
 version = "0.1.0"
 dependencies = [
  "iced",
- "lazy_static",
  "thiserror",
 ]
 
