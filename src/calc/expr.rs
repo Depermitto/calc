@@ -91,20 +91,22 @@ impl Expr {
         let mut digit_parts = String::new();
         for ch in trimmed.chars() {
             let sym = ch.try_to_symbol()?;
-            match sym {
-                Digit(_) | Dot => digit_parts.push(ch),
-                _ => {
-                    if let Ok(s) = digit_parts.as_str().try_to_symbol() {
-                        self.symbols.push(s);
-                        digit_parts.clear();
-                    }
-                    self.symbols.push(sym);
-                }
+            if let Digit(_) | Dot = sym {
+                digit_parts.push(ch);
+                continue;
             }
+
+            if let Ok(s) = digit_parts.as_str().try_to_symbol() {
+                self.symbols.push(s);
+                digit_parts.clear();
+            }
+
+            self.symbols.push(sym);
         }
         if let Ok(s) = digit_parts.try_to_symbol() {
             self.symbols.push(s);
         }
+
         Ok(())
     }
 
