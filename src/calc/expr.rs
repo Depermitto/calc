@@ -1,17 +1,17 @@
 use super::error::CalcError;
-use super::symbol::{Symbol::{self, *}, ToSymbol};
+use super::token::{Token::{self, *}, ToSymbol};
 
 /// Used strictly for mathematical expressions like
 /// **(8 + 7) * 4**. Accepts any amount of whitespace
 #[derive(Debug, Clone)]
 pub struct Expr {
-    symbols: Vec<Symbol>,
+    tokens: Vec<Token>,
 }
 
 impl Expr {
     /// Creates a new empty `Expression`
     pub fn new() -> Self {
-        Self { symbols: vec![] }
+        Self { tokens: vec![] }
     }
 
     /// Converts `value` from infix _(normal)_ notation to
@@ -19,13 +19,13 @@ impl Expr {
     ///
     /// Will catch badly placed parenthesis and dots
     pub fn dijkstrify(&mut self) -> Result<(), CalcError> {
-        let mut output: Vec<Symbol> = vec![];
-        let mut op_stack: Vec<Symbol> = vec![];
-        for symbol in self.symbols.iter() {
-            let symbol = symbol.clone();
-            match symbol {
-                Digit(_) => output.push(symbol),
-                LeftParths => op_stack.push(symbol),
+        let mut output: Vec<Token> = vec![];
+        let mut op_stack: Vec<Token> = vec![];
+        for token in self.tokens.iter() {
+            let token = token.clone();
+            match token {
+                Digit(_) => output.push(token),
+                LeftParths => op_stack.push(token),
                 RightParths => loop {
                     match op_stack.last() {
                         Some(LeftParths) => { op_stack.pop(); break; }
@@ -40,7 +40,7 @@ impl Expr {
                             output.push(op_stack.pop().unwrap())
                         } else { break; }
                     }
-                    op_stack.push(symbol);
+                    op_stack.push(token);
                 }
                 // Dot won't appear anyway
                 Dot => return Err(CalcError::BadExpression)
@@ -50,7 +50,7 @@ impl Expr {
         op_stack.reverse();
         output.append(&mut op_stack);
         // Remove any parenthesis - shouldn't be like this TODO
-        self.symbols = output;
+        self.tokens = output;
 
         Ok(())
     }
@@ -59,10 +59,10 @@ impl Expr {
     /// `Self::value` is in **Reverse Polish Notation**, otherwise or in case
     /// of failure throws `CalcError`
     pub fn calc(&mut self) -> Result<f64, CalcError> {
-        let mut stack: Vec<Symbol> = vec![];
-        for sym in &self.symbols {
-            match sym {
-                Digit(_) => stack.push(sym.clone()),
+        let mut stack: Vec<Token> = vec![];
+        for token in &self.tokens {
+            match token {
+                Digit(_) => stack.push(token.clone()),
                 Op(o) => {
                     if let Some(Digit(a)) = stack.pop() {
                         if let Some(Digit(b)) = stack.pop() {
@@ -90,20 +90,20 @@ impl Expr {
         let trimmed = value.trim().replace(" ", "");
         let mut digit_parts = String::new();
         for ch in trimmed.chars() {
-            let sym = ch.try_to_symbol()?;
-            match sym {
+            let token = ch.try_to_symbol()?;
+            match token {
                 Digit(_) | Dot => digit_parts.push(ch),
                 _ => {
                     if let Ok(s) = digit_parts.as_str().try_to_symbol() {
-                        self.symbols.push(s);
+                        self.tokens.push(s);
                         digit_parts.clear();
                     }
-                    self.symbols.push(sym);
+                    self.tokens.push(token);
                 }
             }
         }
         if let Ok(s) = digit_parts.try_to_symbol() {
-            self.symbols.push(s);
+            self.tokens.push(s);
         }
         Ok(())
     }
@@ -117,12 +117,12 @@ impl Expr {
 
     /// Clear `Self::value`
     pub fn clear(&mut self) {
-        self.symbols.clear();
+        self.tokens.clear();
     }
 
     pub fn to_str(&self) -> String {
         self
-            .symbols
+            .tokens
             .iter()
             .map(|o| o.as_str().to_owned() + " ")
             .collect::<String>()

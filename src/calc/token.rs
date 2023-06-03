@@ -10,7 +10,7 @@ use super::error::CalcError;
 /// - Var - variables
 /// - None - For everything else
 #[derive(Debug, Clone, Copy)]
-pub enum Symbol {
+pub enum Token {
     Digit(f64),
 
     Dot,
@@ -33,7 +33,7 @@ pub enum Op {
     Remainer,
 }
 
-impl Symbol {
+impl Token {
     pub fn new(value: &str) -> Result<Self, CalcError> {
         if let Ok(d) = value.parse::<f64>() {
             return Ok(Self::Digit(d));
@@ -55,11 +55,11 @@ impl Symbol {
 
     pub fn as_str(&self) -> String {
         match self {
-            Symbol::Digit(d) => d.to_string(),
-            Symbol::Dot => ".".to_string(),
-            Symbol::LeftParths => "(".to_string(),
-            Symbol::RightParths => ")".to_string(),
-            Symbol::Op(op) => op.as_str().to_string(),
+            Token::Digit(d) => d.to_string(),
+            Token::Dot => ".".to_string(),
+            Token::LeftParths => "(".to_string(),
+            Token::RightParths => ")".to_string(),
+            Token::Op(op) => op.as_str().to_string(),
         }
     }
 }
@@ -110,7 +110,7 @@ impl Op {
 }
 
 pub trait ToSymbol {
-    fn try_to_symbol(self) -> Result<Symbol, CalcError>;
+    fn try_to_symbol(self) -> Result<Token, CalcError>;
 }
 
 impl<T> ToSymbol for T
@@ -118,19 +118,19 @@ where
     T: ToString,
     String: From<T>,
 {
-    fn try_to_symbol(self) -> Result<Symbol, CalcError> {
+    fn try_to_symbol(self) -> Result<Token, CalcError> {
         let s: String = self.into();
-        Symbol::new(&s)
+        Token::new(&s)
     }
 }
 
-impl ToString for Symbol {
+impl ToString for Token {
     fn to_string(&self) -> String {
         self.as_str().to_string()
     }
 }
 
-impl TryFrom<&str> for Symbol {
+impl TryFrom<&str> for Token {
     type Error = CalcError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
