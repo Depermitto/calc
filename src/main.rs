@@ -6,11 +6,21 @@ mod calc {
 }
 
 use calc::calc::Calc;
+use inquire::Text;
 
 fn main() {
     let mut c = Calc::new();
-    match c.evaluate("-9") {
-        Ok(num) => println!("{}", num),
-        Err(e) => println!("{}", e)
+    loop {
+        let text = Text::new("Expression: ")
+            .with_placeholder("(2 + 1) / 8")
+            .prompt();
+
+        match text {
+            Ok(string) => match c.evaluate(string.as_str()) {
+                Ok(num) => println!("{}", num),
+                Err(e) => println!("{}", e)
+            }
+            Err(_) => { println!("Improper inquiry\nExiting..."); break; }
+        }
     }
 }
