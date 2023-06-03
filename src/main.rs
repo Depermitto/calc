@@ -1,24 +1,26 @@
 mod calc {
     pub mod calc;
-    pub mod consts;
     pub mod error;
-    pub mod expression;
-    pub mod symbol;
+    pub mod expr;
+    pub mod token;
 }
 
-use calc::{symbol::Symbol, symbol::*};
+use calc::calc::Calc;
+use inquire::Text;
 
 fn main() {
-    // let mut c = Calc::new();
-    // match c.evaluate("(1 + 7) * 8") {
-    //     Ok(num) => println!("{}", num),
-    //     Err(e) => println!("{}", e)
-    // }
-    //
-    // let mut t = Expression::new();
-    // t.push("12+8*7");
-    // t.dijkstrify();
-    // println!("{:#?}", t.to_str());
-    let l = Symbol::<Op>::from("8");
-    println!("{:?}", l)
+    let mut c = Calc::new();
+    loop {
+        let text = Text::new("Expression: ")
+            .with_placeholder("(2 + 1) / 8")
+            .prompt();
+
+        match text {
+            Ok(string) => match c.evaluate(string.as_str()) {
+                Ok(num) => println!("{}", num),
+                Err(e) => println!("{}", e)
+            }
+            Err(_) => { println!("Improper inquiry\nExiting..."); break; }
+        }
+    }
 }

@@ -5,6 +5,9 @@ pub enum CalcError {
     #[error("Could not finish the calculation properly")]
     CalculationError,
 
+    #[error("Cannot divide by 0")]
+    ZeroDivision,
+
     #[error("Could not read the expression")]
     BadExpression,
 
