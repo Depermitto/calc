@@ -105,6 +105,7 @@ impl Expr {
         if let Ok(s) = digit_parts.try_to_symbol() {
             self.tokens.push(s);
         }
+
         Ok(())
     }
 
