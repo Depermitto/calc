@@ -1,5 +1,18 @@
 use super::error::CalcError;
-use super::token::{Token::{self, *}, ToSymbol};
+use super::token::{Token::{self, *}, ToToken};
+
+/// macro thanks to [clap](https://github.com/clap-rs/clap/blob/e70b289c5ed43c841bdc11b712c1b2931036c6cd/src/macros.rs#L192-L206)
+macro_rules! for_match {
+    ($it:ident, $($p:pat => $($e:expr);+),*) => {
+        for i in $it.clone() {
+            match i {
+            $(
+                $p => { $($e)+ }
+            )*
+            }
+        }
+    };
+}
 
 /// Used strictly for mathematical expressions like
 /// **(8 + 7) * 4**. Accepts any amount of whitespace
@@ -17,102 +30,95 @@ impl Expr {
     /// Converts `value` from infix _(normal)_ notation to
     /// **Reverse Polish Notation** using the dijkstra algorithm
     ///
-    /// Will catch badly placed parenthesis and dots
-    pub fn dijkstrify(&mut self) -> Result<(), CalcError> {
+    /// Will catch badly placed parenthesis
+    fn infix_to_postfix(tokens: Vec<Token>) -> Result<Vec<Token>, CalcError> {
         let mut output: Vec<Token> = vec![];
-        let mut op_stack: Vec<Token> = vec![];
-        for token in self.tokens.iter() {
-            let token = token.clone();
-            match token {
-                Digit(_) => output.push(token),
-                LeftParths => op_stack.push(token),
-                RightParths => loop {
-                    match op_stack.last() {
-                        Some(LeftParths) => { op_stack.pop(); break; }
-                        Some(_) if op_stack.len() == 1 => return Err(CalcError::BadParenthesis),
-                        Some(_) => output.push(op_stack.pop().unwrap()),
-                        None => return Err(CalcError::BadParenthesis),
+        let mut operator_stack: Vec<Token> = vec![];
+        for_match!(tokens,
+            Digit(d) => output.push(Digit(d)),
+            LeftParths => operator_stack.push(LeftParths),
+            RightParths => loop {
+                match operator_stack.last() {
+                    Some(LeftParths) => {
+                        operator_stack.pop();
+                        break;
+                    },
+                    None => return Err(CalcError::BadParenthesis),
+                    _ => output.push(operator_stack.pop().unwrap())
+                }
+            },
+            Op(o) => {
+                while let Some(Op(o2)) = operator_stack.last() {
+                    if o2.weight() >= o.weight() {
+                        output.push(operator_stack.pop().unwrap());
+                    } else {
+                        break;
                     }
                 }
-                Op(o1) => {
-                    while let Some(Op(o2)) = op_stack.last() {
-                        if o1.weight() <= o2.weight() {
-                            output.push(op_stack.pop().unwrap())
-                        } else { break; }
-                    }
-                    op_stack.push(token);
-                }
-                // Dot won't appear anyway
-                Dot => return Err(CalcError::BadExpression)
-            };
-        }
-        // Add stack elements to output in reverse order
-        op_stack.reverse();
-        output.append(&mut op_stack);
-        // Remove any parenthesis - shouldn't be like this TODO
-        self.tokens = output;
+                operator_stack.push(Op(o));
+            }
+        );
+        operator_stack.reverse();
+        output.append(&mut operator_stack);
 
-        Ok(())
+        Ok(output)
     }
 
     /// Consumes `Self::value` inside and returns a `Result`. Assumes
     /// `Self::value` is in **Reverse Polish Notation**, otherwise or in case
     /// of failure throws `CalcError`
     pub fn calc(&mut self) -> Result<f64, CalcError> {
-        let mut stack: Vec<Token> = vec![];
-        for token in &self.tokens {
-            match token {
-                Digit(_) => stack.push(token.clone()),
-                Op(o) => {
-                    if let Some(Digit(a)) = stack.pop() {
-                        if let Some(Digit(b)) = stack.pop() {
-                            let result = o.call(b, a)?;
-                            stack.push(result.to_string().try_to_symbol()?);
-                        }
-                    }
-                    else { return Err(CalcError::BadExpression) }
+        let mut stack = Vec::<Token>::new();
+        let tokens = self.tokens.clone();
+        for_match!(tokens,
+            Digit(d) => stack.push(Digit(d)),
+            Op(o) => {
+                if stack.len() >= 1 {
+                    // Get the top Digit
+                    let Some(Digit(first)) = stack.pop() else { return Err(CalcError::BadExpression) };
+                    // Calculate the result
+                    let result = match stack.pop() {
+                        Some(Digit(second)) if o.is_binary() => o.call_double(second, first)?,
+                        _ if o.is_unary() => o.call_single(first)?,
+                        _ => return Err(CalcError::BadExpression)
+                    };
+                    // Push back to the stack
+                    stack.push(result.to_string().try_to_token()?);
+                } else {
+                    return Err(CalcError::BadExpression);
                 }
-                _ => ()
-            }
-        }
-
-        if let Some(Digit(d)) = stack.pop() {
-            Ok(d)
-        } else {
-            Err(CalcError::CalculationError)
-        }
+            },
+            _ => return Err(CalcError::BadExpression)
+        );
+        let Some(Digit(result)) = stack.pop() else { return Err(CalcError::BadExpression) };
+        Ok(result)
     }
 
-    /// Appends `Self::value` by `value` which is heavily constrained
-    /// for mathematical purposes
-    pub fn push(&mut self, value: &str) -> Result<(), CalcError> {
-        // Trim whitespaces
-        let trimmed = value.trim().replace(" ", "");
-        let mut digit_parts = String::new();
-        for ch in trimmed.chars() {
-            let token = ch.try_to_symbol()?;
-            match token {
-                Digit(_) | Dot => digit_parts.push(ch),
-                _ => {
-                    if let Ok(s) = digit_parts.as_str().try_to_symbol() {
-                        self.tokens.push(s);
-                        digit_parts.clear();
-                    }
-                    self.tokens.push(token);
+    /// Sets the expression, accepts infix notation and returns postfix
+    pub fn set(&mut self, text: &str) -> Result<(), CalcError> {
+        self.tokens.clear();
+        let text: String = text
+            .trim()
+            .replace(" ", "")
+            .chars()
+            .map(|c|
+                if c.is_alphanumeric() || c == '.' {
+                    c.to_string()
+                } else {
+                    format!(" {} ", c)
                 }
-            }
-        }
-        if let Ok(s) = digit_parts.try_to_symbol() {
-            self.tokens.push(s);
-        }
+            )
+            .collect();
+        let text: Vec<Result<Token, CalcError>> = text
+            .trim()
+            .split(" ")
+            .map(|c| c.try_to_token())
+            .collect();
 
-        Ok(())
-    }
+        let mut tokens: Vec<Token> = text.into_iter().flatten().collect();
+        tokens = Self::infix_to_postfix(tokens)?;
 
-    /// Sets `Self::value` to `value`
-    pub fn set(&mut self, value: &str) -> Result<(), CalcError> {
-        self.clear();
-        self.push(value)?;
+        self.tokens = tokens;
         Ok(())
     }
 

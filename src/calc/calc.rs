@@ -18,7 +18,7 @@ impl Calc {
 
     pub fn evaluate(&mut self, value: &str) -> Result<f64, CalcError> {
         self.expression.set(value)?;
-        self.expression.dijkstrify()?;
+        println!("{}", self.expression.to_str());
 
         let outcome = self.expression.calc();
         match outcome {

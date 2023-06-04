@@ -14,6 +14,9 @@ pub enum CalcError {
     #[error("Bad parenthesis")]
     BadParenthesis,
 
+    #[error("Incorrect number of arguments for this operator")]
+    IncorrectNumberOfArgs,
+
     #[error("{0} was not recognized")]
     UnsupportedValue(String),
 }
