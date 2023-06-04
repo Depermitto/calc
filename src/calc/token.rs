@@ -3,17 +3,11 @@ use super::error::CalcError;
 /// Represents a string literal with one of 4 States
 /// - Digit - holds information about a number
 /// - Op - represents an arithmetic operator with a specified kind
-/// - Func - represents a function
 /// - LeftParths - (
 /// - RightParths - )
-/// - Dot - .
-/// - Var - variables
-/// - None - For everything else
 #[derive(Debug, Clone, Copy)]
 pub enum Token {
     Digit(f64),
-
-    Dot,
 
     LeftParths,
 
@@ -39,7 +33,6 @@ impl Token {
             return Ok(Self::Digit(d));
         }
         match value {
-            "." => Ok(Self::Dot),
             "(" => Ok(Self::LeftParths),
             ")" => Ok(Self::RightParths),
             "+" => Ok(Self::Op(Op::Plus)),
@@ -56,7 +49,6 @@ impl Token {
     pub fn as_str(&self) -> String {
         match self {
             Token::Digit(d) => d.to_string(),
-            Token::Dot => ".".to_string(),
             Token::LeftParths => "(".to_string(),
             Token::RightParths => ")".to_string(),
             Token::Op(op) => op.as_str().to_string(),
@@ -90,10 +82,44 @@ impl Op {
         }
     }
 
-    pub fn call(&self, first: f64, second: f64) -> Result<f64, CalcError> {
+    pub fn is_unary(&self) -> bool {
+        match self {
+            Op::Plus | Op::Minus | Op::Fractal => true,
+            _ => false
+        }
+    }
+
+    pub fn is_binary(&self) -> bool {
+        match self {
+            Op::Plus | Op::Minus => true,
+            _ => !self.is_unary()
+        }
+    }
+
+    fn fractal(number: f64) -> f64 {
+        let number = number as i128;
+        let mut result: i128 = 1;
+        for step in (1..=number).rev() {
+            result *= step;
+        }
+        result as f64
+    }
+
+    /// Call the operator on a single argument
+    pub fn call_single(&self, number: f64) -> Result<f64, CalcError> {
+        match self {
+            Op::Plus => Ok(number),
+            Op::Minus => Ok(0.0 - number),
+            Op::Fractal => Ok(Self::fractal(number)),
+            _ => Err(CalcError::IncorrectNumberOfArgs)
+        }
+    }
+
+    /// Call the operator
+    pub fn call_double(&self, first: f64, second: f64) -> Result<f64, CalcError> {
         match self {
             Op::Plus => Ok(first + second),
-            Op::Fractal => Err(CalcError::UnsupportedValue(String::from("!"))),
+            Op::Fractal => Err(CalcError::IncorrectNumberOfArgs),
             Op::Minus => Ok(first - second),
             Op::Multiply => Ok(first * second),
             Op::Divide => {
@@ -109,16 +135,16 @@ impl Op {
     }
 }
 
-pub trait ToSymbol {
-    fn try_to_symbol(self) -> Result<Token, CalcError>;
+pub trait ToToken {
+    fn try_to_token(self) -> Result<Token, CalcError>;
 }
 
-impl<T> ToSymbol for T
+impl<T> ToToken for T
 where
     T: ToString,
     String: From<T>,
 {
-    fn try_to_symbol(self) -> Result<Token, CalcError> {
+    fn try_to_token(self) -> Result<Token, CalcError> {
         let s: String = self.into();
         Token::new(&s)
     }
