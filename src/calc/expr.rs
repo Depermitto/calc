@@ -73,12 +73,13 @@ impl Expr {
         for_match!(tokens,
             Digit(d) => stack.push(Digit(d)),
             Op(o) => {
-                if stack.len() >= 1 {
-                    // Get the top Digit
-                    let Some(Digit(first)) = stack.pop() else { return Err(CalcError::BadExpression) };
-                    // Calculate the result
-                    let result = match stack.pop() {
-                        Some(Digit(second)) if o.is_binary() => o.call_double(second, first)?,
+                if let Some(Digit(first)) = stack.pop() {
+                    let result = match stack.last() {
+                        Some(Digit(second)) if o.is_binary() => {
+                            let n = o.call_double(*second, first)?;
+                            stack.pop();
+                            n
+                        }
                         _ if o.is_unary() => o.call_single(first)?,
                         _ => return Err(CalcError::BadExpression)
                     };

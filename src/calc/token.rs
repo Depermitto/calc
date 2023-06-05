@@ -129,7 +129,7 @@ impl Op {
                     Ok(first / second)
                 }
             }
-            Op::Power => Ok(first * second),
+            Op::Power => Ok(first.powf(second)),
             Op::Remainer => Ok(first % second),
         }
     }
