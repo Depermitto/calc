@@ -1,15 +1,18 @@
 use super::error::CalcError;
-use super::expr::Expr;
+use super::expr::Expression;
 
 pub struct Calc {
-    expression: Expr,
+    expression: Expression,
     result: Option<f64>,
 }
 
 impl Calc {
     /// Creates a new `Calc` with `expression` empty and `result` equal to 0.0
     pub fn new() -> Self {
-        Self { expression: Expr::new(), result: None }
+        Self {
+            expression: Expression::new(),
+            result: None,
+        }
     }
 
     pub fn result(&self) -> Option<f64> {
@@ -23,7 +26,7 @@ impl Calc {
         let outcome = self.expression.calc();
         match outcome {
             Ok(out) => self.result = Some(out),
-            Err(e) => return Err(e)
+            Err(e) => return Err(e),
         }
         Ok(self.result().unwrap())
     }

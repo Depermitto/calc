@@ -1,5 +1,8 @@
 use super::error::CalcError;
-use super::token::{Token::{self, *}, ToToken};
+use super::token::{
+    ToToken,
+    Token::{self, *},
+};
 
 /// macro thanks to [clap](https://github.com/clap-rs/clap/blob/e70b289c5ed43c841bdc11b712c1b2931036c6cd/src/macros.rs#L192-L206)
 macro_rules! for_match {
@@ -17,11 +20,11 @@ macro_rules! for_match {
 /// Used strictly for mathematical expressions like
 /// **(8 + 7) * 4**. Accepts any amount of whitespace
 #[derive(Debug, Clone)]
-pub struct Expr {
+pub struct Expression {
     tokens: Vec<Token>,
 }
 
-impl Expr {
+impl Expression {
     /// Creates a new empty `Expression`
     pub fn new() -> Self {
         Self { tokens: vec![] }
@@ -91,7 +94,9 @@ impl Expr {
             },
             _ => return Err(CalcError::BadExpression)
         );
-        let Some(Digit(result)) = stack.pop() else { return Err(CalcError::BadExpression) };
+        let Some(Digit(result)) = stack.pop() else {
+            return Err(CalcError::BadExpression);
+        };
         Ok(result)
     }
 
@@ -102,19 +107,16 @@ impl Expr {
             .trim()
             .replace(" ", "")
             .chars()
-            .map(|c|
+            .map(|c| {
                 if c.is_alphanumeric() || c == '.' {
                     c.to_string()
                 } else {
                     format!(" {} ", c)
                 }
-            )
+            })
             .collect();
-        let text: Vec<Result<Token, CalcError>> = text
-            .trim()
-            .split(" ")
-            .map(|c| c.try_to_token())
-            .collect();
+        let text: Vec<Result<Token, CalcError>> =
+            text.trim().split(" ").map(|c| c.try_to_token()).collect();
 
         let mut tokens: Vec<Token> = text.into_iter().flatten().collect();
         tokens = Self::infix_to_postfix(tokens)?;
@@ -129,8 +131,7 @@ impl Expr {
     }
 
     pub fn to_str(&self) -> String {
-        self
-            .tokens
+        self.tokens
             .iter()
             .map(|o| o.as_str().to_owned() + " ")
             .collect::<String>()

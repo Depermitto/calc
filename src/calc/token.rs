@@ -20,11 +20,11 @@ pub enum Token {
 pub enum Op {
     Plus,
     Minus,
-    Fractal,
+    Factorial,
     Multiply,
-    Divide,
+    Division,
     Power,
-    Remainer,
+    ModuloDivision,
 }
 
 impl Token {
@@ -37,10 +37,10 @@ impl Token {
             ")" => Ok(Self::RightParths),
             "+" => Ok(Self::Op(Op::Plus)),
             "-" => Ok(Self::Op(Op::Minus)),
-            "!" => Ok(Self::Op(Op::Fractal)),
-            "%" => Ok(Self::Op(Op::Remainer)),
+            "!" => Ok(Self::Op(Op::Factorial)),
+            "%" => Ok(Self::Op(Op::ModuloDivision)),
             "*" => Ok(Self::Op(Op::Multiply)),
-            "/" => Ok(Self::Op(Op::Divide)),
+            "/" => Ok(Self::Op(Op::Division)),
             "^" => Ok(Self::Op(Op::Power)),
             _ => Err(CalcError::UnsupportedValue(value.to_string())),
         }
@@ -56,17 +56,16 @@ impl Token {
     }
 }
 
-
 impl Op {
     pub fn as_str(&self) -> &str {
         match self {
             Op::Plus => "+",
             Op::Minus => "-",
-            Op::Fractal => "!",
+            Op::Factorial => "!",
             Op::Multiply => "*",
-            Op::Divide => "/",
+            Op::Division => "/",
             Op::Power => "^",
-            Op::Remainer => "%",
+            Op::ModuloDivision => "%",
         }
     }
 
@@ -74,25 +73,25 @@ impl Op {
         match self {
             Op::Plus => 1,
             Op::Minus => 1,
-            Op::Fractal => 3,
+            Op::Factorial => 3,
             Op::Multiply => 2,
-            Op::Divide => 2,
+            Op::Division => 2,
             Op::Power => 3,
-            Op::Remainer => 2,
+            Op::ModuloDivision => 2,
         }
     }
 
     pub fn is_unary(&self) -> bool {
         match self {
-            Op::Plus | Op::Minus | Op::Fractal => true,
-            _ => false
+            Op::Plus | Op::Minus | Op::Factorial => true,
+            _ => false,
         }
     }
 
     pub fn is_binary(&self) -> bool {
         match self {
             Op::Plus | Op::Minus => true,
-            _ => !self.is_unary()
+            _ => !self.is_unary(),
         }
     }
 
@@ -110,8 +109,8 @@ impl Op {
         match self {
             Op::Plus => Ok(number),
             Op::Minus => Ok(0.0 - number),
-            Op::Fractal => Ok(Self::fractal(number)),
-            _ => Err(CalcError::IncorrectNumberOfArgs)
+            Op::Factorial => Ok(Self::fractal(number)),
+            _ => Err(CalcError::IncorrectNumberOfArgs),
         }
     }
 
@@ -119,10 +118,10 @@ impl Op {
     pub fn call_double(&self, first: f64, second: f64) -> Result<f64, CalcError> {
         match self {
             Op::Plus => Ok(first + second),
-            Op::Fractal => Err(CalcError::IncorrectNumberOfArgs),
+            Op::Factorial => Err(CalcError::IncorrectNumberOfArgs),
             Op::Minus => Ok(first - second),
             Op::Multiply => Ok(first * second),
-            Op::Divide => {
+            Op::Division => {
                 if second == 0.0 {
                     Err(CalcError::ZeroDivision)
                 } else {
@@ -130,7 +129,7 @@ impl Op {
                 }
             }
             Op::Power => Ok(first.powf(second)),
-            Op::Remainer => Ok(first % second),
+            Op::ModuloDivision => Ok(first % second),
         }
     }
 }

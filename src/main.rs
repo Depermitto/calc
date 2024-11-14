@@ -18,9 +18,12 @@ fn main() {
         match text {
             Ok(string) => match c.evaluate(string.as_str()) {
                 Ok(num) => println!("{}", num),
-                Err(e) => println!("{}", e)
+                Err(e) => println!("{}", e),
+            },
+            Err(_) => {
+                println!("Improper inquiry\nExiting...");
+                break;
             }
-            Err(_) => { println!("Improper inquiry\nExiting..."); break; }
         }
     }
 }
